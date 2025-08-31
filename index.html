@@ -1,0 +1,181 @@
+<!-- Formulario directo con número de personas bloqueado -->
+<div id="formContainer" style="background:#ffffff; padding:20px; border-radius:16px; 
+  max-width:400px; margin:20px auto; font-family:'Poppins', sans-serif; width:100%; 
+  box-sizing:border-box;">
+
+  <form id="formAsistencia" style="width:100%; box-sizing:border-box;">
+
+    <!-- Nombre -->
+    <label class="labelForm">Nombre</label>
+    <input type="text" name="nombre" required class="inputForm">
+
+    <!-- Teléfono -->
+    <label class="labelForm">Teléfono</label>
+    <input type="tel" name="telefono" required class="inputForm">
+
+    <!-- Asistencia -->
+    <label class="labelForm">¿Asistirás?</label>
+    <select name="respuesta" id="respuesta" required class="inputForm">
+      <option value="">Selecciona una opción</option>
+      <option value="¡Claro, ahí estaré!">¡Claro, ahí estaré!</option>
+      <option value="Lo siento, no podré asistir">Lo siento, no podré asistir</option>
+    </select>
+
+    <!-- Número de personas (solo lectura) -->
+    <label class="labelForm">Número de asistentes asignados:</label>
+    <input type="text" name="personas" id="personas" readonly class="inputForm">
+
+    <!-- Botón -->
+    <div style="text-align:center; margin-top:10px;">
+      <button type="submit" class="btnForm" id="btnSubmit">Enviar por WhatsApp</button>
+    </div>
+  </form>
+  
+  <!-- Mensaje de "enviando" -->
+  <p id="mensajeEspera" style="display:none; color:#666; text-align:center; 
+    font-size:15px; margin-top:20px;">⏳ Enviando, por favor espera...</p>
+
+  <!-- Mensaje de confirmación -->
+  <p id="mensajeConfirmacion" style="display:none; color:#2c3e50; text-align:center; 
+    font-size:18px; font-weight:600; margin-top:30px;">✅ ¡Tu confirmación ha sido enviada!</p>
+</div>
+
+<style>
+  :root {
+    --colorFondo: #ffffff;
+    --colorBoton: #B76A38;
+    --colorTextoBoton: #ffffff;
+    --colorTextoLabel: #555555;
+    --colorTextoConfirm: #2c3e50;
+    --fuentePrincipal: 'Poppins', sans-serif;
+  }
+
+  .labelForm {
+    font-size:13px;
+    font-weight:600;
+    color: var(--colorTextoLabel);
+    display:block;
+    margin-bottom:5px;
+  }
+
+  .inputForm {
+    width:100%;
+    padding:10px;
+    margin-bottom:15px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:14px;
+    box-sizing:border-box;
+  }
+
+  .btnForm {
+    background: var(--colorBoton);
+    color: var(--colorTextoBoton);
+    border:none;
+    padding:10px 22px;
+    border-radius:30px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:14px;
+  }
+
+  .btnForm:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  #mensajeConfirmacion {
+    font-family: var(--fuentePrincipal);
+    color: var(--colorTextoConfirm);
+    font-size:20px;
+    font-weight:700;
+  }
+</style>
+
+<script>
+  // URL del Google Apps Script
+  const scriptURL ="https://script.google.com/macros/s/AKfycbzGPNYwsCfDjEoslSBV7wn10YiQYn9S9dJwrvObs6a-2uPPXURtWRAOCApYJMKTXjgz/exec";
+
+  // Teléfono del anfitrión
+  const anfitrion = "5218127629170"; // <-- Cambiar por cada evento
+
+  // Texto del encabezado del evento
+  const evento = "Gemma & Ana – 8 de Noviembre 2025"; // <-- Cambiar por cada evento
+
+  const form = document.getElementById("formAsistencia");
+  const confirmacion = document.getElementById("mensajeConfirmacion");
+  const mensajeEspera = document.getElementById("mensajeEspera");
+  const btnSubmit = document.getElementById("btnSubmit");
+  const personasInput = document.getElementById("personas");
+
+  // 1. Detectar el número de personas según la URL
+  const personasMap = {
+    "88e1507b": 1,
+    "dbbab7c9": 2,
+    "5e345f87": 3,
+    "76111dfd": 4,
+    "dcd616c1": 5,
+    "fa54723c": 6
+  };
+
+  const currentURL = window.location.href;
+  let personasAsignadas = "";
+
+  for (let key in personasMap) {
+    if (currentURL.includes(key)) {
+      personasAsignadas = personasMap[key];
+      break;
+    }
+  }
+
+  if (personasAsignadas) {
+    personasInput.value = personasAsignadas + (personasAsignadas > 1 ? " personas" : " persona");
+  }
+
+  // 2. Enviar formulario
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+
+    btnSubmit.disabled = true;
+    mensajeEspera.style.display = "block";
+
+    const formData = new FormData(form);
+    const nombre = formData.get("nombre");
+    const telefono = formData.get("telefono");
+    const respuesta = formData.get("respuesta");
+    const personas = personasAsignadas;
+
+    const texto = `${evento}
+NOMBRE: ${nombre}
+TELÉFONO: ${telefono}
+RESPUESTA: ${respuesta}
+CONFIRMA NÚMERO DE ASISTENTES: ${personas}`;
+
+    const data = new FormData();
+    data.append("nombre", nombre);
+    data.append("telefono", telefono);
+    data.append("respuesta", respuesta);
+    data.append("personas", personas);
+
+    fetch(scriptURL, { method: "POST", body: data })
+      .then(() => {
+        form.style.display = "none";
+        mensajeEspera.style.display = "none";
+        confirmacion.style.display = "block";
+
+        try {
+          window.location.href = `whatsapp://send?phone=${anfitrion}&text=${encodeURIComponent(texto)}`;
+          setTimeout(() => {
+            window.open(`https://wa.me/${anfitrion}?text=${encodeURIComponent(texto)}`, "_blank");
+          }, 600);
+        } catch (e) {
+          window.open(`https://wa.me/${anfitrion}?text=${encodeURIComponent(texto)}`, "_blank");
+        }
+      })
+      .catch(err => {
+        btnSubmit.disabled = false;
+        mensajeEspera.style.display = "none";
+        alert("Error al enviar: " + err.message);
+      });
+  });
+</script>
